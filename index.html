@@ -27,31 +27,39 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-        import { 
-            getFirestore, collection, addDoc, query, orderBy, onSnapshot, 
-            serverTimestamp, updateDoc, doc, increment 
+        import {
+            getFirestore, collection, addDoc, query, orderBy, onSnapshot,
+            serverTimestamp, updateDoc, doc, increment
         } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
         // КОНФИГУРАЦИЯ
         const firebaseConfig = {
-              apiKey: "AIzaSyDhjJYBfw26XzOLoQnxDYmqbOzRrMowOJA",
-              authDomain: "coolsigma-e4092.firebaseapp.com",
-              projectId: "coolsigma-e4092",
-              storageBucket: "coolsigma-e4092.firebasestorage.app",
-              messagingSenderId: "857040857815",
-              appId: "1:857040857815:web:feb288d01e359ac77a9e92",
-              measurementId: "G-K3RDDETTXT"
+            apiKey: "AIzaSyDhjJYBfw26XzOLoQnxDYmqbOzRrMowOJA",
+            authDomain: "coolsigma-e4092.firebaseapp.com",
+            projectId: "coolsigma-e4092",
+            storageBucket: "coolsigma-e4092.firebasestorage.app",
+            messagingSenderId: "857040857815",
+            appId: "1:857040857815:web:feb288d01e359ac77a9e92",
+            measurementId: "G-K3RDDETTXT"
         };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         // МЕТОД: АТОМАРНОЕ ОБНОВЛЕНИЕ (LIKES)
-        window.processLike = async (id) => {
+        const processLike = async (id) => {
             const docRef = doc(db, "requests", id);
             try {
                 await updateDoc(docRef, { likes: increment(1) });
             } catch (e) { console.error("Validation Error:", e.message); }
         };
+
+        // ДЕЛЕГИРОВАНИЕ СОБЫТИЙ ДЛЯ КНОПОК ЛАЙКА
+        document.getElementById('feed').addEventListener('click', (e) => {
+            if (e.target.classList.contains('like-btn')) {
+                const id = e.target.dataset.id;
+                processLike(id);
+            }
+        });
 
         // МЕТОД: ЗАПИСЬ С ВАЛИДАЦИЕЙ
         document.getElementById('mainBtn').onclick = async () => {
@@ -70,19 +78,18 @@
         };
 
         // МЕТОД: REAL-TIME СИНХРОНИЗАЦИЯ
-        
         const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const feed = document.getElementById('feed');
             feed.innerHTML = "";
-            snapshot.forEach((doc) => {
-                const data = doc.data();
+            snapshot.forEach((document) => {
+                const data = document.data();
                 feed.innerHTML += `
                     <div class="post">
                         <span class="time">${data.timestamp?.toDate().toLocaleTimeString() || '...'}</span>
                         <b>${data.name}</b>
                         <p style="margin: 5px 0;">${data.email}</p>
-                        <button class="like-btn" onclick="processLike('${doc.id}')">👍 ${data.likes || 0}</button>
+                        <button class="like-btn" data-id="${document.id}">👍 ${data.likes || 0}</button>
                     </div>
                 `;
             });

@@ -448,26 +448,66 @@
       snap.forEach(docSnap => {
         const d = docSnap.data();
         const isOther = d.uid && d.uid !== currentUser?.uid;
-        feed.innerHTML += `
-          <div class="post-card">
-            <div class="post-header">
-              <img src="${d.photo || 'https://via.placeholder.com/36'}" class="post-avatar">
-              <div class="post-meta">
-                <div class="post-author">${d.name}</div>
-                <div class="post-time">${d.timestamp?.toDate().toLocaleString('ru') || '...'}</div>
-              </div>
-            </div>
-            <div class="post-body">
-              ${d.imageUrl ? `<img src="${d.imageUrl}" alt="">` : ''}
-              ${d.text ? `<p>${d.text}</p>` : ''}
-            </div>
-            <div class="post-footer">
-              <button class="like-btn" onclick="processLike('${docSnap.id}')">👍 ${d.likes || 0}</button>
-              ${isOther ? `<button class="msg-btn" onclick="openChatWithUser('${d.uid}','${d.name}','${d.photo}')">✉️ Написать</button>` : ''}
-            </div>
-          </div>`;
+
+        // ✅ БЕЗОПАСНО: строим DOM вручную, не через innerHTML с данными из базы
+        const card = document.createElement('div');
+        card.className = 'post-card';
+
+        const header = document.createElement('div');
+        header.className = 'post-header';
+        const avt = document.createElement('img');
+        avt.src = d.photo || 'https://via.placeholder.com/36';
+        avt.className = 'post-avatar';
+        const meta = document.createElement('div');
+        meta.className = 'post-meta';
+        const authorEl = document.createElement('div');
+        authorEl.className = 'post-author';
+        authorEl.textContent = d.name;
+        const timeEl = document.createElement('div');
+        timeEl.className = 'post-time';
+        timeEl.textContent = d.timestamp?.toDate().toLocaleString('ru') || '...';
+        meta.appendChild(authorEl);
+        meta.appendChild(timeEl);
+        header.appendChild(avt);
+        header.appendChild(meta);
+
+        const body = document.createElement('div');
+        body.className = 'post-body';
+        if (d.imageUrl) {
+          const img = document.createElement('img');
+          img.src = d.imageUrl;
+          img.alt = '';
+          body.appendChild(img);
+        }
+        if (d.text) {
+          const p = document.createElement('p');
+          p.textContent = d.text;
+          body.appendChild(p);
+        }
+
+        const footer = document.createElement('div');
+        footer.className = 'post-footer';
+        const likeBtn = document.createElement('button');
+        likeBtn.className = 'like-btn';
+        likeBtn.textContent = '👍 ' + (d.likes || 0);
+        likeBtn.onclick = () => processLike(docSnap.id);
+        footer.appendChild(likeBtn);
+        if (isOther) {
+          const msgBtn = document.createElement('button');
+          msgBtn.className = 'msg-btn';
+          msgBtn.textContent = '✉️ Написать';
+          msgBtn.onclick = () => openChatWithUser(d.uid, d.name, d.photo);
+          footer.appendChild(msgBtn);
+        }
+
+        card.appendChild(header);
+        card.appendChild(body);
+        card.appendChild(footer);
+        feed.appendChild(card);
       });
     });
+  }
+
   }
 
   function uploadImage(file) {
@@ -512,14 +552,29 @@
       div.className = 'contact-item' + (activeChatId === cid ? ' active' : '');
       div.dataset.chatId = cid;
       div.onclick = () => openChat(user);
-      div.innerHTML = `
-        <img src="${user.photo || 'https://via.placeholder.com/40'}" class="contact-avatar">
-        <div class="contact-info">
-          <div class="contact-name">${user.name}</div>
-          <div class="contact-last" id="last_${cid}">...</div>
-        </div>
-        <span class="contact-unread" id="unread_${cid}" style="display:none">0</span>
-      `;
+      // ✅ БЕЗОПАСНО: DOM вместо innerHTML
+      const img = document.createElement('img');
+      img.src = user.photo || 'https://via.placeholder.com/40';
+      img.className = 'contact-avatar';
+      const info = document.createElement('div');
+      info.className = 'contact-info';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'contact-name';
+      nameEl.textContent = user.name;
+      const lastEl = document.createElement('div');
+      lastEl.className = 'contact-last';
+      lastEl.id = 'last_' + cid;
+      lastEl.textContent = '...';
+      info.appendChild(nameEl);
+      info.appendChild(lastEl);
+      const unreadEl = document.createElement('span');
+      unreadEl.className = 'contact-unread';
+      unreadEl.id = 'unread_' + cid;
+      unreadEl.style.display = 'none';
+      unreadEl.textContent = '0';
+      div.appendChild(img);
+      div.appendChild(info);
+      div.appendChild(unreadEl);
       list.appendChild(div);
       loadLastMessage(cid, user);
     });
@@ -603,7 +658,13 @@
         const time = data.timestamp?.toDate().toLocaleTimeString('ru', {hour:'2-digit',minute:'2-digit'}) || '';
         const bubble = document.createElement('div');
         bubble.className = 'msg-bubble ' + (mine ? 'mine' : 'theirs');
-        bubble.innerHTML = `${data.text}<div class="msg-time">${time}</div>`;
+        // ✅ БЕЗОПАСНО: textContent не выполняет HTML/JS
+        const textNode = document.createTextNode(data.text);
+        bubble.appendChild(textNode);
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'msg-time';
+        timeDiv.textContent = time;
+        bubble.appendChild(timeDiv);
         container.appendChild(bubble);
       });
       container.scrollTop = container.scrollHeight;
